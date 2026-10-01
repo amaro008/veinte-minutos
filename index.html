@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Veinte Minutos</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Veinte Minutos</h1>
+  <p class="lead">Se escribe antes de opinar. Se lee en silencio. Después se discute.</p>
+
+  <div class="sheet">
+    <h2 style="margin-top:0">Tengo un código</h2>
+    <p class="tiny">Entras sin dar tu nombre ni tu correo. Tus notas son anónimas, también para el autor.</p>
+    <label for="code">Código de la ronda</label>
+    <input id="code" maxlength="8" autocapitalize="characters" autocomplete="off" placeholder="A7K2QD">
+    <div class="row"><button id="entrar">Entrar a leer</button></div>
+    <div id="avisoCodigo"></div>
+  </div>
+
+  <hr class="divider">
+
+  <h2>Soy el autor de una iniciativa</h2>
+  <div id="zonaAutor">
+    <label for="email">Correo</label>
+    <input id="email" type="email" autocomplete="email">
+    <label for="pass">Contraseña</label>
+    <input id="pass" type="password" autocomplete="current-password">
+    <div class="row">
+      <button id="login">Entrar</button>
+      <button id="signup" class="ghost">Crear cuenta</button>
+    </div>
+    <div id="avisoAutor"></div>
+  </div>
+
+</div>
+
+<script type="module">
+import { sb, sesion, aviso } from '/assets/app.js';
+
+const $ = id => document.getElementById(id);
+
+// Si ya hay sesión de autor, no tiene caso mostrar el formulario.
+(async () => {
+  const s = await sesion();
+  if (s) {
+    $('zonaAutor').innerHTML =
+      '<p class="muted">Ya tienes sesión abierta.</p><div class="row"><a class="item" style="border-left-width:3px" href="/owner.html">Ir a mis iniciativas</a></div>';
+  }
+})();
+
+const code = new URLSearchParams(location.search).get('code');
+if (code) $('code').value = code.toUpperCase();
+
+$('entrar').onclick = () => {
+  const c = $('code').value.trim().toUpperCase();
+  if (c.length < 4) return aviso($('avisoCodigo'), 'Escribe el código completo.', true);
+  location.href = `/read.html?code=${encodeURIComponent(c)}`;
+};
+
+$('code').addEventListener('keydown', e => { if (e.key === 'Enter') $('entrar').click(); });
+
+async function auth(modo) {
+  const email = $('email').value.trim();
+  const password = $('pass').value;
+  if (!email || password.length < 6) {
+    return aviso($('avisoAutor'), 'Necesitas un correo y una contraseña de al menos 6 caracteres.', true);
+  }
+  aviso($('avisoAutor'), 'Un momento...');
+  try {
+    const c = await sb();
+    const { error } = modo === 'login'
+      ? await c.auth.signInWithPassword({ email, password })
+      : await c.auth.signUp({ email, password });
+    if (error) throw error;
+    const s = await sesion();
+    if (!s) return aviso($('avisoAutor'), 'Cuenta creada. Revisa tu correo para confirmarla y luego entra.');
+    location.href = '/owner.html';
+  } catch (e) {
+    aviso($('avisoAutor'), e.message, true);
+  }
+}
+$('login').onclick = () => auth('login');
+$('signup').onclick = () => auth('signup');
+</script>
+</body>
+</html>

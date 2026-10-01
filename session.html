@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Las 5 preguntas · Veinte Minutos</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="top">
+  <div class="brand">Veinte Minutos <span id="tit">·</span></div>
+  <nav><a href="/owner.html">Salir</a></nav>
+</div>
+
+<div class="wrap">
+  <div class="steps" id="pasos"></div>
+  <p class="tiny" id="etiqueta"></p>
+
+  <div id="chat"></div>
+  <div id="aviso"></div>
+
+  <div id="zonaEscribir">
+    <textarea id="msg" placeholder="Escribe tu respuesta"></textarea>
+    <div class="row">
+      <button id="enviar">Responder</button>
+      <button id="forzar" class="quiet" title="Guarda lo que escribiste y sigue. El hueco queda marcado en el documento.">Avanzar así</button>
+    </div>
+  </div>
+
+  <div id="zonaFinal" style="display:none">
+    <div class="banner">Las cinco respuestas están registradas. El borrador se genera a partir de ellas, sin agregar datos que tú no hayas dado.</div>
+    <div class="row"><button id="generar">Generar el borrador</button></div>
+  </div>
+</div>
+
+<script type="module">
+import { sb, exigirSesion, api, esc, aviso } from '/assets/app.js';
+const $ = id => document.getElementById(id);
+const id = new URLSearchParams(location.search).get('id');
+await exigirSesion();
+const c = await sb();
+
+const PREGUNTAS = [
+  'Quién es el cliente',
+  'Cuál es su problema u oportunidad',
+  'Cuál es el beneficio más importante',
+  'Cómo sabes que lo necesita',
+  'Cómo se ve su experiencia'
+];
+
+let qActual = 1, ultimo = '', respuestas = [];
+
+const ini = (await c.from('initiatives').select('*').eq('id', id).single()).data;
+if (!ini) { location.href = '/owner.html'; }
+$('tit').textContent = '· ' + ini.title;
+
+async function cargar() {
+  respuestas = (await c.from('answers').select('question_no,quality').eq('initiative_id', id)).data || [];
+  const hechas = new Set(respuestas.map(r => r.question_no));
+  qActual = [1, 2, 3, 4, 5].find(n => !hechas.has(n)) || 6;
+  pintarPasos();
+
+  if (qActual === 6) {
+    $('zonaEscribir').style.display = 'none';
+    $('zonaFinal').style.display = 'block';
+    $('etiqueta').textContent = 'Las 5 preguntas están contestadas.';
+    $('chat').innerHTML = '';
+    return;
+  }
+  $('etiqueta').textContent = `Pregunta ${qActual} de 5. ${PREGUNTAS[qActual - 1]}`;
+
+  const msgs = (await c.from('facilitator_messages').select('role,content')
+    .eq('initiative_id', id).eq('question_no', qActual).order('id')).data || [];
+  $('chat').innerHTML = msgs.map(pintarMsg).join('');
+
+  if (!msgs.length) await turno(null);
+  else window.scrollTo(0, document.body.scrollHeight);
+}
+
+function pintarPasos() {
+  const q = {}; respuestas.forEach(r => q[r.question_no] = r.quality);
+  $('pasos').innerHTML = [1, 2, 3, 4, 5].map(n => {
+    const cls = q[n] === 'weak' ? 'weak' : q[n] ? 'done' : (n === qActual ? 'now' : '');
+    return `<div class="step ${cls}"></div>`;
+  }).join('');
+}
+
+const pintarMsg = m => m.role === 'assistant'
+  ? `<div class="msg f"><div class="from">Facilitador</div><p>${esc(m.content)}</p></div>`
+  : `<div class="msg u"><p>${esc(m.content)}</p></div>`;
+
+async function turno(texto) {
+  $('enviar').disabled = $('forzar').disabled = true;
+  aviso($('aviso'), '');
+  $('chat').insertAdjacentHTML('beforeend', '<p class="muted" id="cargando"><span class="spin"></span> Pensando</p>');
+  window.scrollTo(0, document.body.scrollHeight);
+  try {
+    const r = await api('claude', { mode: 'facilitate', initiativeId: id, questionNo: qActual, message: texto });
+    $('cargando')?.remove();
+    $('chat').insertAdjacentHTML('beforeend', pintarMsg({ role: 'assistant', content: r.reply }));
+    if (r.accepted) { $('msg').value = ''; await cargar(); }
+  } catch (e) {
+    $('cargando')?.remove();
+    aviso($('aviso'), e.message, true);
+  }
+  $('enviar').disabled = $('forzar').disabled = false;
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+$('enviar').onclick = async () => {
+  const t = $('msg').value.trim();
+  if (!t) return;
+  ultimo = t;
+  $('chat').insertAdjacentHTML('beforeend', pintarMsg({ role: 'user', content: t }));
+  $('msg').value = '';
+  await turno(t);
+};
+
+$('forzar').onclick = async () => {
+  const t = $('msg').value.trim() || ultimo;
+  if (!t) return aviso($('aviso'), 'Escribe algo primero. Avanzar así guarda tu respuesta y marca el hueco, no lo salta.', true);
+  await c.from('answers').delete().eq('initiative_id', id).eq('question_no', qActual);
+  await c.from('answers').insert({ initiative_id: id, question_no: qActual, answer_text: t, quality: 'weak' });
+  $('msg').value = '';
+  await cargar();
+};
+
+$('generar').onclick = async () => {
+  $('generar').disabled = true;
+  aviso($('aviso'), 'Escribiendo el borrador. Tarda medio minuto.');
+  try {
+    await api('claude', { mode: 'draft', initiativeId: id });
+    location.href = `/document.html?id=${id}`;
+  } catch (e) {
+    aviso($('aviso'), e.message, true);
+    $('generar').disabled = false;
+  }
+};
+
+await cargar();
+</script>
+</body>
+</html>

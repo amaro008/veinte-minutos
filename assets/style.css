@@ -1,0 +1,169 @@
+/* Veinte Minutos
+   Papel frio, tinta pizarra, marcador amarillo y lapiz rojo de editor.
+   Todo el atrevimiento esta en el reloj de la pantalla de lectura. */
+
+:root{
+  --paper:#E7E9E4;
+  --sheet:#FCFCFA;
+  --ink:#1B2128;
+  --ink-soft:#5C656E;
+  --rule:#CDD2CC;
+  --marker:#FFE45C;
+  --marker-soft:rgba(255,228,92,.45);
+  --pencil:#A83226;
+  --green:#2E6B4F;
+  --shadow:0 1px 0 var(--rule);
+  --serif:'Newsreader',Georgia,serif;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:640px;margin:0 auto;padding:20px 18px 72px}
+a{color:var(--ink)}
+
+/* ---------- barra superior ---------- */
+.top{
+  display:flex;align-items:baseline;justify-content:space-between;
+  gap:12px;padding:14px 18px;border-bottom:1px solid var(--rule);
+  position:sticky;top:0;background:var(--paper);z-index:20;
+}
+.brand{font-family:var(--sans);font-weight:600;letter-spacing:-.02em;font-size:15px}
+.brand span{color:var(--ink-soft);font-weight:400}
+.top nav{font-size:14px;color:var(--ink-soft);display:flex;gap:14px}
+.top nav a{text-decoration:none;color:var(--ink-soft)}
+.top nav a:hover{color:var(--ink)}
+
+/* ---------- tipografia ---------- */
+h1{font-family:var(--serif);font-weight:500;font-size:30px;line-height:1.15;letter-spacing:-.02em;margin:24px 0 8px}
+h2{font-family:var(--sans);font-weight:600;font-size:15px;margin:32px 0 10px}
+p{margin:0 0 14px;max-width:66ch}
+.lead{font-family:var(--serif);font-size:19px;line-height:1.45;color:var(--ink-soft)}
+.muted{color:var(--ink-soft);font-size:14px}
+.tiny{font-size:13px;color:var(--ink-soft)}
+
+/* ---------- controles ---------- */
+label{display:block;font-size:13px;font-weight:500;margin:14px 0 5px}
+input,textarea,select{
+  width:100%;font:inherit;color:var(--ink);background:var(--sheet);
+  border:1px solid var(--rule);border-radius:2px;padding:11px 12px;
+}
+textarea{resize:vertical;min-height:92px;line-height:1.5}
+input:focus,textarea:focus,select:focus,button:focus-visible{
+  outline:2px solid var(--ink);outline-offset:1px;
+}
+button{
+  font:inherit;font-weight:500;cursor:pointer;border-radius:2px;
+  border:1px solid var(--ink);background:var(--ink);color:var(--paper);
+  padding:11px 18px;
+}
+button:disabled{opacity:.45;cursor:default}
+button.ghost{background:transparent;color:var(--ink)}
+button.quiet{background:transparent;border-color:var(--rule);color:var(--ink-soft);padding:7px 12px;font-size:14px}
+button.danger{background:transparent;border-color:var(--pencil);color:var(--pencil)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+
+/* ---------- tarjetas de lista ---------- */
+.item{
+  display:block;background:var(--sheet);border:1px solid var(--rule);
+  border-left:3px solid var(--ink);padding:14px 15px;margin-bottom:10px;
+  text-decoration:none;
+}
+.item h3{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 4px}
+.item.idea{border-left-color:var(--ink-soft)}
+.item.produccion{border-left-color:var(--green)}
+.tag{
+  display:inline-block;font-size:12px;color:var(--ink-soft);
+  border:1px solid var(--rule);padding:1px 7px;border-radius:2px;margin-right:6px;
+}
+
+/* ---------- el documento ---------- */
+.sheet{background:var(--sheet);border:1px solid var(--rule);padding:26px 22px;margin-top:18px}
+.doc{font-family:var(--serif);font-size:18px;line-height:1.62}
+.doc .blk{padding:2px 0;margin:0 0 18px;scroll-margin-top:140px}
+.doc .title{font-size:27px;line-height:1.2;font-weight:500;margin-bottom:10px}
+.doc .sub{font-size:19px;color:var(--ink-soft);font-style:italic;margin-bottom:22px}
+.doc .bh{display:block;font-family:var(--sans);font-size:13px;font-weight:600;margin-bottom:3px}
+.doc .qa .bh{font-family:var(--serif);font-size:18px;font-weight:600;font-style:normal;margin-bottom:2px}
+.doc blockquote{margin:0;padding-left:14px;border-left:2px solid var(--marker);font-style:italic}
+.divider{border:0;border-top:1px solid var(--rule);margin:30px 0 22px}
+.section-name{font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:14px}
+
+.flagged{border-left:2px solid var(--pencil);padding-left:12px}
+.flagged.resolved{border-left-color:var(--green)}
+.flag-note{font-family:var(--sans);font-size:12px;color:var(--pencil);display:block;margin-top:5px}
+.flag-note.resolved{color:var(--green)}
+
+/* ---------- marcador ---------- */
+mark{background:var(--marker-soft);color:inherit;padding:1px 0}
+.heat-1{background:rgba(255,228,92,.22)}
+.heat-2{background:rgba(255,228,92,.4)}
+.heat-3{background:rgba(255,228,92,.62)}
+
+/* ---------- reloj ---------- */
+.clock{
+  position:sticky;top:0;z-index:30;background:var(--paper);
+  border-bottom:1px solid var(--rule);padding:10px 18px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.clock .t{
+  font-family:var(--sans);font-variant-numeric:tabular-nums;
+  font-size:34px;font-weight:300;letter-spacing:-.03em;line-height:1;
+}
+.clock .t.low{color:var(--pencil)}
+.clock .who{font-size:13px;color:var(--ink-soft);text-align:right;line-height:1.3}
+
+/* ---------- barra flotante de anotacion ---------- */
+.float{
+  position:fixed;left:12px;right:12px;bottom:14px;z-index:40;
+  background:var(--ink);color:var(--paper);padding:12px;
+  display:none;box-shadow:0 6px 24px rgba(27,33,40,.28);
+}
+.float.on{display:block}
+.float textarea{background:#262D35;border-color:#3A434D;color:#F1F3F0;min-height:66px}
+.float .row{margin-top:10px}
+.float button{border-color:var(--marker);background:var(--marker);color:var(--ink)}
+.float button.quiet{background:transparent;border-color:#4A545E;color:#C6CCD2}
+.float .q{font-family:var(--serif);font-size:14px;color:#C6CCD2;font-style:italic;
+  margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ---------- notas ---------- */
+.note{border-left:2px solid var(--marker);background:var(--sheet);padding:10px 12px;margin:0 0 8px}
+.note .alias{font-size:12px;color:var(--ink-soft);margin-bottom:3px}
+.note .q{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-soft);margin-bottom:5px}
+.note p{margin:0;font-size:15px}
+
+/* ---------- chat del facilitador ---------- */
+.msg{margin-bottom:16px;max-width:60ch}
+.msg .from{font-size:12px;color:var(--ink-soft);margin-bottom:3px}
+.msg.f p{font-family:var(--serif);font-size:18px;line-height:1.55;margin:0}
+.msg.u{margin-left:auto;text-align:right}
+.msg.u p{background:var(--sheet);border:1px solid var(--rule);display:inline-block;
+  padding:9px 12px;text-align:left;margin:0;font-size:15px}
+.steps{display:flex;gap:5px;margin:16px 0 6px}
+.step{flex:1;height:3px;background:var(--rule)}
+.step.done{background:var(--ink)}
+.step.now{background:var(--marker)}
+.step.weak{background:var(--pencil)}
+
+.banner{border:1px solid var(--rule);border-left:3px solid var(--marker);
+  background:var(--sheet);padding:12px 14px;margin:16px 0;font-size:14px}
+.err{border-left-color:var(--pencil);color:var(--pencil)}
+.code{font-family:var(--sans);font-size:32px;font-weight:600;letter-spacing:.18em}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--rule);
+  border-top-color:var(--ink);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (min-width:720px){
+  .wrap{padding-top:28px}
+  h1{font-size:38px}
+  .sheet{padding:40px 44px}
+}

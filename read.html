@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lectura · Veinte Minutos</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<div class="clock">
+  <div class="t" id="reloj">--:--</div>
+  <div class="who">
+    <div id="alias">entrando</div>
+    <div id="estado">lectura en silencio</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="aviso"></div>
+  <div class="sheet"><div class="doc" id="doc"><p class="muted"><span class="spin"></span> Abriendo el documento</p></div></div>
+  <div class="row">
+    <button id="terminar" class="ghost">Ya terminé de leer</button>
+  </div>
+  <p class="tiny" style="margin-top:14px">Selecciona cualquier parte del texto para dejar una nota. Nadie ve las notas de nadie hasta que el autor cierra la ronda, y entonces aparecen todas juntas y sin nombres.</p>
+</div>
+
+<div class="float" id="barra">
+  <div class="q" id="cita"></div>
+  <textarea id="nota" placeholder="¿Qué le falta a esta parte?"></textarea>
+  <div class="row">
+    <button id="guardarNota">Dejar la nota</button>
+    <button id="cancelar" class="quiet">Cancelar</button>
+  </div>
+</div>
+
+<script type="module">
+import { api, esc, aviso, pintarBloque, resaltar, SECCIONES } from '/assets/app.js';
+const $ = id => document.getElementById(id);
+const code = (new URLSearchParams(location.search).get('code') || '').toUpperCase();
+if (!code) location.href = '/index.html';
+
+const LLAVE = 'vm-token-' + code;
+let ronda = null, bloques = [], mias = [], reveladas = null, seleccion = null, cerrado = false;
+
+async function entrar() {
+  try {
+    const r = await api('reader', { action: 'join', code, token: localStorage.getItem(LLAVE) }, false);
+    localStorage.setItem(LLAVE, r.me.token);
+    ronda = r.round; bloques = r.blocks; mias = r.annotations;
+    $('alias').textContent = r.me.alias;
+    arrancarReloj(new Date(r.me.started_at).getTime() + r.round.minutes * 60000);
+    pintar();
+    if (ronda.status === 'cerrada') await revelar();
+    else setInterval(revisarCierre, 15000);
+  } catch (e) {
+    $('doc').innerHTML = '';
+    aviso($('aviso'), e.message, true);
+  }
+}
+
+function pintar() {
+  const notas = reveladas || mias.map(a => ({ ...a, alias: 'Tu nota' }));
+  const porBloque = {};
+  notas.forEach(a => (porBloque[a.block_id] = porBloque[a.block_id] || []).push(a));
+
+  let html = '';
+  for (const sec of ['pr', 'faq_ext', 'faq_int']) {
+    const bs = bloques.filter(b => b.section === sec);
+    if (!bs.length) continue;
+    if (sec !== 'pr') html += `<hr class="divider"><div class="section-name">${SECCIONES[sec]}</div>`;
+    for (const b of bs) {
+      let bloque = pintarBloque(b);
+      (porBloque[b.id] || []).forEach(a => { bloque = resaltar(bloque, a.quote); });
+      html += bloque;
+      if (porBloque[b.id]) {
+        html += `<div style="margin:-8px 0 18px">${porBloque[b.id].map(a => `
+          <div class="note">
+            <div class="alias">${esc(a.alias)}</div>
+            <p>${esc(a.comment)}</p>
+            ${!reveladas ? `<button class="quiet" data-borrar="${esc(a.id)}" style="margin-top:6px">Quitar</button>` : ''}
+          </div>`).join('')}</div>`;
+      }
+    }
+  }
+  $('doc').innerHTML = html;
+
+  $('doc').querySelectorAll('[data-borrar]').forEach(b => b.onclick = async () => {
+    await api('reader', { action: 'delete', code, token: localStorage.getItem(LLAVE), annotationId: b.dataset.borrar }, false);
+    mias = mias.filter(a => a.id !== b.dataset.borrar);
+    pintar();
+  });
+}
+
+// ---------------- seleccion de texto ----------------
+function alSeleccionar() {
+  if (cerrado || reveladas) return;
+  const sel = document.getSelection();
+  const texto = sel ? sel.toString().trim() : '';
+  if (!texto || texto.length < 3) return;
+  let nodo = sel.anchorNode;
+  while (nodo && (!nodo.dataset || !nodo.dataset.block)) nodo = nodo.parentElement;
+  if (!nodo) return;
+  seleccion = { blockId: nodo.dataset.block, quote: texto };
+  $('cita').textContent = texto;
+  $('barra').classList.add('on');
+  $('nota').focus();
+}
+document.addEventListener('mouseup', () => setTimeout(alSeleccionar, 10));
+document.addEventListener('touchend', () => setTimeout(alSeleccionar, 250));
+
+$('cancelar').onclick = () => { $('barra').classList.remove('on'); $('nota').value = ''; seleccion = null; };
+
+$('guardarNota').onclick = async () => {
+  const comment = $('nota').value.trim();
+  if (!seleccion || !comment) return;
+  $('guardarNota').disabled = true;
+  try {
+    const r = await api('reader', {
+      action: 'annotate', code, token: localStorage.getItem(LLAVE),
+      blockId: seleccion.blockId, quote: seleccion.quote, comment
+    }, false);
+    mias.push(r.annotation);
+    $('nota').value = ''; seleccion = null;
+    $('barra').classList.remove('on');
+    pintar();
+  } catch (e) { aviso($('aviso'), e.message, true); }
+  $('guardarNota').disabled = false;
+};
+
+// ---------------- reloj ----------------
+function arrancarReloj(fin) {
+  const tic = () => {
+    const falta = Math.max(0, fin - Date.now());
+    const m = Math.floor(falta / 60000), s = Math.floor((falta % 60000) / 1000);
+    $('reloj').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    $('reloj').classList.toggle('low', falta < 120000);
+    if (falta === 0 && !cerrado) terminar(true);
+  };
+  tic(); setInterval(tic, 1000);
+}
+
+async function terminar(auto) {
+  cerrado = true;
+  $('barra').classList.remove('on');
+  $('terminar').style.display = 'none';
+  $('estado').textContent = auto ? 'se acabó el tiempo' : 'listo, esperando al resto';
+  try { await api('reader', { action: 'submit', code, token: localStorage.getItem(LLAVE) }, false); } catch { }
+  aviso($('aviso'), 'Tus notas quedaron guardadas. Aparecerán junto con las de los demás cuando el autor cierre la ronda.');
+}
+$('terminar').onclick = () => terminar(false);
+
+async function revisarCierre() {
+  try {
+    const r = await api('reader', { action: 'revealed', code }, false);
+    if (r.revealed) { reveladas = r.annotations; $('estado').textContent = 'revelado'; aviso($('aviso'), ''); pintar(); }
+  } catch { }
+}
+async function revelar() { await revisarCierre(); }
+
+entrar();
+</script>
+</body>
+</html>
