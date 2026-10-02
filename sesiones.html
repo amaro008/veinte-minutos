@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sesión de lectura · Veinte Minutos</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<div class="band">
+  <div class="fila">
+    <div>
+      <div class="t">Sesión de lectura</div>
+      <div class="s" id="sub">&nbsp;</div>
+    </div>
+    <a href="#" id="volver">Documento</a>
+  </div>
+</div>
+
+<div class="cuerpo">
+  <div class="estados" id="estados"></div>
+  <div id="aviso"></div>
+  <div id="zona"><p class="muted"><span class="giro"></span> Cargando</p></div>
+  <div id="pasadas"></div>
+</div>
+
+<script type="module">
+import { sb, exigirSesion, api, esc, aviso, pintarBloque } from '/assets/app.js';
+const $ = id => document.getElementById(id);
+const id = new URLSearchParams(location.search).get('id');
+await exigirSesion();
+const c = await sb();
+
+let doc = null;
+
+const ini = (await c.from('initiatives').select('*').eq('id', id).single()).data;
+if (!ini) location.href = '/owner.html';
+$('volver').href = `/document.html?id=${id}`;
+
+function pintarEstados(paso) {
+  const p = [['Primero', 'Invitas'], ['Mientras', 'Leen en silencio'], ['Al cerrar', 'Revelas'], ['Después', 'Reescribes']];
+  $('estados').innerHTML = p.map(([a, b], i) =>
+    `<div class="${i === paso ? 'activo' : ''}"><div class="cuando">${a}</div><div class="que">${b}</div></div>`).join('');
+}
+
+const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const nuevoCodigo = () => Array.from({ length: 6 }, () => LETRAS[Math.floor(Math.random() * LETRAS.length)]).join('');
+
+async function cargar() {
+  const docs = (await c.from('documents').select('id,version').eq('initiative_id', id)
+    .order('version', { ascending: false })).data || [];
+  doc = docs[0];
+  $('sub').textContent = `${ini.title} · versión ${doc.version}`;
+
+  const todas = (await c.from('rounds').select('*').in('document_id', docs.map(d => d.id))
+    .order('opened_at', { ascending: false })).data || [];
+  const abierta = todas.find(r => r.status === 'abierta');
+
+  if (abierta) { pintarEstados(1); await pintarAbierta(abierta); }
+  else { pintarEstados(0); pintarNueva(); }
+
+  const cerradas = todas.filter(r => r.status === 'cerrada');
+  $('pasadas').innerHTML = cerradas.length
+    ? '<h2>Sesiones anteriores</h2>' + cerradas.map(r => `
+        <div class="caja">
+          <div class="rotulo">${esc(r.label || '')} · cerrada</div>
+          <div class="fila"><button class="suave" data-rev="${r.id}" style="flex-grow:1">Ver lo que escribieron</button></div>
+          <div id="rev-${r.id}"></div>
+        </div>`).join('')
+    : '';
+  $('pasadas').querySelectorAll('[data-rev]').forEach(b => b.onclick = () => revelar(b.dataset.rev));
+}
+
+function pintarNueva() {
+  $('zona').innerHTML = `
+    <p class="lead">Vas a repartir un código. Quien lo tenga lee el documento con un reloj corriendo y deja notas sobre el texto.</p>
+    <p class="tiny">Nadie ve las notas de nadie hasta que tú cierras la sesión. Entonces aparecen todas juntas y sin nombres.</p>
+    <label for="min">Minutos de lectura</label>
+    <input id="min" type="number" min="5" max="60" value="20">
+    <div class="fila" style="margin-top:16px"><button id="abrir">Abrir la sesión</button></div>`;
+  $('abrir').onclick = async () => {
+    $('abrir').disabled = true;
+    const { error } = await c.from('rounds').insert({
+      document_id: doc.id, code: nuevoCodigo(),
+      minutes: Math.max(5, Math.min(60, parseInt($('min').value) || 20)),
+      label: `Versión ${doc.version}`
+    });
+    if (error) { $('abrir').disabled = false; return aviso($('aviso'), error.message, true); }
+    await c.from('initiatives').update({ status: 'rondas' }).eq('id', id);
+    await cargar();
+  };
+}
+
+async function pintarAbierta(r) {
+  const liga = `${location.origin}/read.html?code=${r.code}`;
+  $('zona').innerHTML = `
+    <div class="codigo">
+      <p class="rotulo">Comparte este código</p>
+      <div class="n">${esc(r.code)}</div>
+      <div class="fila">
+        <button id="copiar">Copiar liga</button>
+        <button id="compartir" class="suave" style="flex-grow:0">Compartir</button>
+      </div>
+    </div>
+    <div class="caja">
+      <div class="fila" style="justify-content:space-between">
+        <div class="rotulo" style="margin:0">Quién va entrando</div>
+        <div class="tiny">${r.minutes} min cada quien</div>
+      </div>
+      <div class="gente" id="gente"></div>
+      <div style="font-family:var(--serif);font-size:17px;line-height:1.5" id="conteo">Nadie ha entrado todavía.</div>
+      <p class="tiny" style="margin:6px 0 0">No puedes ver sus notas todavía. Nadie puede, ni ellos entre sí.</p>
+    </div>
+    <div class="fila" style="margin-top:18px"><button id="cerrar" class="oscuro">Cerrar y revelar las notas</button></div>
+    <p class="tiny" style="text-align:center;margin-top:8px">Todos las ven al mismo tiempo. No se puede reabrir.</p>`;
+
+  $('copiar').onclick = () => { navigator.clipboard?.writeText(liga); $('copiar').textContent = 'Copiada'; };
+  $('compartir').onclick = () => navigator.share
+    ? navigator.share({ title: 'Sesión de lectura', text: `Código ${r.code}`, url: liga })
+    : (navigator.clipboard?.writeText(liga), $('compartir').textContent = 'Copiada');
+
+  $('cerrar').onclick = async () => {
+    if (!confirm('Al cerrar, todas las notas se revelan al mismo tiempo para todos. No se puede reabrir.')) return;
+    await api('owner', { action: 'close', roundId: r.id });
+    await cargar();
+  };
+
+  const refrescar = async () => {
+    try {
+      const s = await api('owner', { action: 'status', roundId: r.id });
+      const total = Math.max(s.entraron, 1);
+      $('gente').innerHTML = Array.from({ length: Math.max(total, 4) }, (_, i) =>
+        `<i class="${i < s.terminaron ? 'listo' : i < s.entraron ? 'entro' : ''}"></i>`).join('');
+      $('conteo').textContent = s.entraron
+        ? `${s.entraron} entraron. ${s.terminaron} ya terminaron.`
+        : 'Nadie ha entrado todavía.';
+    } catch { }
+  };
+  await refrescar();
+  setInterval(refrescar, 15000);
+}
+
+async function revelar(roundId) {
+  const caja = $(`rev-${roundId}`);
+  caja.innerHTML = '<p class="muted"><span class="giro"></span> Cargando</p>';
+  const r = await api('owner', { action: 'review', roundId });
+  pintarEstados(2);
+  if (!r.revealed) { caja.innerHTML = '<p class="muted">Se revela al cerrar la sesión.</p>'; return; }
+  if (!r.annotations.length) { caja.innerHTML = '<p class="muted">Nadie dejó notas.</p>'; return; }
+
+  const porBloque = {};
+  r.annotations.forEach(a => (porBloque[a.block_id] = porBloque[a.block_id] || []).push(a));
+  const max = Math.max(...Object.values(r.heat));
+  const calor = b => {
+    const n = r.heat[b.id] || 0;
+    return n ? ' calor-' + (n >= max ? 3 : n >= max / 2 ? 2 : 1) : '';
+  };
+
+  caja.innerHTML = `
+    <p class="tiny" style="margin:14px 0">${r.annotations.length} notas. El párrafo más subrayado es el que hay que reescribir.</p>
+    <div class="doc" style="font-size:16px">
+      ${r.blocks.map(b => pintarBloque(b, calor(b)) + (porBloque[b.id] ? `
+        <div style="margin:-10px 0 20px">
+          ${porBloque[b.id].map(a => `
+            <div class="nota">
+              <div class="alias">${esc(a.alias)}</div>
+              ${a.quote ? `<div class="cita">${esc(a.quote)}</div>` : ''}
+              <p>${esc(a.comment)}</p>
+            </div>`).join('')}
+        </div>` : '')).join('')}
+    </div>`;
+}
+
+await cargar();
+</script>
+</body>
+</html>

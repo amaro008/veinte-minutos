@@ -5,38 +5,38 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Documento · Veinte Minutos</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-<div class="top">
-  <div class="brand">Veinte Minutos <span id="tit">·</span></div>
-  <nav><a href="/owner.html">Mis iniciativas</a></nav>
+
+<div class="band">
+  <div class="fila">
+    <div class="t" id="tit">&nbsp;</div>
+    <div style="font-size:13px;color:var(--on-dark-muted)" id="ver"></div>
+  </div>
+  <div class="fila" style="margin-top:10px;gap:16px">
+    <a href="/owner.html">Iniciativas</a>
+    <a href="#" id="aMemoria">Memoria</a>
+  </div>
 </div>
 
-<div class="wrap">
-  <p class="tiny" id="meta"></p>
+<div class="cuerpo">
   <div id="aviso"></div>
-
-  <div class="sheet"><div class="doc" id="doc"></div></div>
-
-  <div class="row">
-    <button id="guardar">Guardar como versión nueva</button>
-    <button id="agregar" class="quiet">Agregar pregunta al FAQ interno</button>
+  <div class="hoja"><div class="doc" id="doc"></div></div>
+  <div class="fila" style="margin-top:16px">
+    <button id="agregar" class="suave" style="flex-grow:1">Agregar pregunta al FAQ interno</button>
+    <button id="guardar" class="suave" style="flex-grow:1">Guardar versión</button>
   </div>
+</div>
 
-  <hr class="divider">
-  <h2>Rondas de lectura</h2>
-  <p class="tiny">Cada ronda se abre sobre la versión guardada más reciente. Mientras esté abierta solo ves cuánta gente entró, nunca lo que escribieron.</p>
-  <div class="row">
-    <button id="abrir">Abrir una ronda</button>
-    <input id="min" type="number" min="5" max="60" value="20" style="width:86px" aria-label="Minutos">
-  </div>
-  <div id="rondas"></div>
+<div class="barra">
+  <p class="tiny" id="huecos" style="margin:0 0 10px"></p>
+  <div class="fila"><button id="invitar">Invitar a leer</button></div>
 </div>
 
 <script type="module">
-import { sb, exigirSesion, api, esc, aviso, pintarBloque, SECCIONES } from '/assets/app.js';
+import { sb, exigirSesion, esc, aviso, pintarBloque, SECCIONES } from '/assets/app.js';
 const $ = id => document.getElementById(id);
 const id = new URLSearchParams(location.search).get('id');
 await exigirSesion();
@@ -46,17 +46,21 @@ let doc = null, blocks = [], editando = null;
 
 const ini = (await c.from('initiatives').select('*').eq('id', id).single()).data;
 if (!ini) location.href = '/owner.html';
-$('tit').textContent = '· ' + ini.title;
+$('tit').textContent = ini.title;
+$('aMemoria').href = `/memoria.html?id=${id}`;
+$('invitar').onclick = () => location.href = `/sesiones.html?id=${id}`;
 
 async function cargar() {
   const { data } = await c.from('documents').select('*').eq('initiative_id', id)
     .order('version', { ascending: false }).limit(1);
   if (!data || !data.length) { location.href = `/session.html?id=${id}`; return; }
-  doc = data[0];
-  blocks = doc.blocks;
-  $('meta').textContent = `Versión ${doc.version} · ${blocks.filter(b => b.flag && b.status !== 'resolved').length} huecos marcados`;
+  doc = data[0]; blocks = doc.blocks;
+  $('ver').textContent = `Versión ${doc.version}`;
+  const abiertos = blocks.filter(b => b.flag && b.status !== 'resolved').length;
+  $('huecos').textContent = abiertos
+    ? `${abiertos} huecos sin resolver. Puedes invitar igual.`
+    : 'Sin huecos marcados.';
   pintar();
-  await pintarRondas();
 }
 
 function pintar() {
@@ -64,7 +68,7 @@ function pintar() {
   for (const sec of ['pr', 'faq_ext', 'faq_int']) {
     const bs = blocks.filter(b => b.section === sec);
     if (!bs.length) continue;
-    if (sec !== 'pr') html += `<hr class="divider"><div class="section-name">${SECCIONES[sec]}</div>`;
+    if (sec !== 'pr') html += `<div class="seccion">${SECCIONES[sec]}</div>`;
     for (const b of bs) html += editando === b.id ? editor(b) : lectura(b);
   }
   $('doc').innerHTML = html;
@@ -74,34 +78,31 @@ function pintar() {
 function lectura(b) {
   const abierto = b.flag && b.status !== 'resolved';
   return pintarBloque(b) +
-    `<div class="row" style="margin:-10px 0 18px">
-       <button class="quiet" data-edit="${esc(b.id)}">Editar</button>
-       ${abierto ? `<button class="quiet" data-resolve="${esc(b.id)}">Resolver con evidencia</button>` : ''}
-       ${b.flag ? '' : `<button class="quiet" data-del="${esc(b.id)}">Quitar</button>`}
+    `<div class="fila" style="margin:-12px 0 20px;gap:8px">
+       <button class="liga" data-edit="${esc(b.id)}" style="flex-grow:0">Editar</button>
+       ${abierto ? `<button class="liga" data-resolve="${esc(b.id)}" style="flex-grow:0">Resolver con evidencia</button>` : ''}
+       ${b.flag ? '' : `<button class="liga" data-del="${esc(b.id)}" style="flex-grow:0">Quitar</button>`}
      </div>`;
 }
 
 function editor(b) {
   return `<div class="blk">
     ${b.heading !== undefined ? `<input data-h="${esc(b.id)}" value="${esc(b.heading || '')}" placeholder="Encabezado">` : ''}
-    <textarea data-t="${esc(b.id)}">${esc(b.text)}</textarea>
+    <textarea data-t="${esc(b.id)}" style="margin-top:8px">${esc(b.text)}</textarea>
     ${b.flag && b.status !== 'resolved'
-      ? `<p class="flag-note">Este bloque está marcado como ${b.flag === 'supuesto' ? 'supuesto sin validar' : 'pregunta abierta'}. Puedes reescribirlo, no borrar la marca. Se quita resolviéndolo con evidencia.</p>` : ''}
-    <div class="row"><button data-ok="${esc(b.id)}">Listo</button></div>
+      ? `<p class="tiny" style="color:var(--marker-deep);margin-top:8px">Marcado como ${b.flag === 'supuesto' ? 'supuesto sin validar' : 'pregunta abierta'}. Lo puedes reescribir, no borrar la marca. Se quita resolviéndolo con evidencia.</p>` : ''}
+    <div class="fila" style="margin-top:10px"><button data-ok="${esc(b.id)}">Listo</button></div>
   </div>`;
 }
 
 function conectar() {
-  $('doc').querySelectorAll('[data-edit]').forEach(b =>
-    b.onclick = () => { editando = b.dataset.edit; pintar(); });
+  $('doc').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { editando = b.dataset.edit; pintar(); });
 
   $('doc').querySelectorAll('[data-ok]').forEach(b => b.onclick = () => {
-    const bid = b.dataset.ok;
-    const blk = blocks.find(x => x.id === bid);
-    const h = $('doc').querySelector(`[data-h="${bid}"]`);
-    const t = $('doc').querySelector(`[data-t="${bid}"]`);
+    const blk = blocks.find(x => x.id === b.dataset.ok);
+    const h = $('doc').querySelector(`[data-h="${b.dataset.ok}"]`);
     if (h) blk.heading = h.value;
-    blk.text = t.value;
+    blk.text = $('doc').querySelector(`[data-t="${b.dataset.ok}"]`).value;
     editando = null; pintar();
   });
 
@@ -115,8 +116,7 @@ function conectar() {
     const blk = blocks.find(x => x.id === b.dataset.resolve);
     const ev = prompt('¿Con qué evidencia queda resuelto? Escribe el dato o la fuente, no una intención.');
     if (!ev || ev.trim().length < 8) return;
-    blk.status = 'resolved';
-    blk.evidence = ev.trim();
+    blk.status = 'resolved'; blk.evidence = ev.trim();
     pintar();
   });
 }
@@ -136,99 +136,9 @@ $('guardar').onclick = async () => {
   $('guardar').disabled = false;
   if (error) return aviso($('aviso'), error.message, true);
   doc = data;
-  aviso($('aviso'), `Guardado como versión ${doc.version}. Las rondas nuevas usarán esta.`);
+  aviso($('aviso'), `Guardado como versión ${doc.version}. Las sesiones nuevas usarán esta.`);
   await cargar();
 };
-
-// ------------------------- rondas -------------------------
-const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const nuevoCodigo = () => Array.from({ length: 6 }, () => LETRAS[Math.floor(Math.random() * LETRAS.length)]).join('');
-
-$('abrir').onclick = async () => {
-  $('abrir').disabled = true;
-  const { error } = await c.from('rounds').insert({
-    document_id: doc.id, code: nuevoCodigo(),
-    minutes: Math.max(5, Math.min(60, parseInt($('min').value) || 20)),
-    label: `Versión ${doc.version}`
-  });
-  $('abrir').disabled = false;
-  if (error) return aviso($('aviso'), error.message, true);
-  await c.from('initiatives').update({ status: 'rondas' }).eq('id', id);
-  await pintarRondas();
-};
-
-async function pintarRondas() {
-  const docs = (await c.from('documents').select('id,version').eq('initiative_id', id)).data || [];
-  const ids = docs.map(d => d.id);
-  const rs = (await c.from('rounds').select('*').in('document_id', ids).order('opened_at', { ascending: false })).data || [];
-  if (!rs.length) { $('rondas').innerHTML = '<p class="muted">Todavía no abres ninguna ronda.</p>'; return; }
-
-  $('rondas').innerHTML = rs.map(r => `
-    <div class="item" style="border-left-color:${r.status === 'abierta' ? 'var(--marker)' : 'var(--ink-soft)'}">
-      <div class="code">${esc(r.code)}</div>
-      <p class="tiny" style="margin:6px 0 8px">${esc(r.label || '')} · ${r.minutes} minutos · ${r.status}</p>
-      <p class="tiny" id="st-${r.id}"></p>
-      <div class="row" style="margin-top:8px">
-        <button class="quiet" data-link="${r.code}">Copiar liga</button>
-        ${r.status === 'abierta'
-          ? `<button class="quiet" data-close="${r.id}">Cerrar y revelar</button>`
-          : `<button class="quiet" data-rev="${r.id}">Ver anotaciones</button>`}
-      </div>
-      <div id="rev-${r.id}"></div>
-    </div>`).join('');
-
-  rs.forEach(async r => {
-    try {
-      const s = await api('owner', { action: 'status', roundId: r.id });
-      $(`st-${r.id}`).textContent = `${s.entraron} entraron · ${s.terminaron} terminaron`;
-    } catch { }
-  });
-
-  $('rondas').querySelectorAll('[data-link]').forEach(b => b.onclick = () => {
-    const url = `${location.origin}/read.html?code=${b.dataset.link}`;
-    navigator.clipboard?.writeText(url);
-    b.textContent = 'Copiada';
-  });
-
-  $('rondas').querySelectorAll('[data-close]').forEach(b => b.onclick = async () => {
-    if (!confirm('Al cerrar, todas las anotaciones se revelan al mismo tiempo para todos. No se puede reabrir.')) return;
-    await api('owner', { action: 'close', roundId: b.dataset.close });
-    await pintarRondas();
-  });
-
-  $('rondas').querySelectorAll('[data-rev]').forEach(b => b.onclick = () => revisar(b.dataset.rev));
-}
-
-async function revisar(roundId) {
-  const caja = $(`rev-${roundId}`);
-  caja.innerHTML = '<p class="muted"><span class="spin"></span> Cargando</p>';
-  const r = await api('owner', { action: 'review', roundId });
-  if (!r.revealed) { caja.innerHTML = '<p class="muted">Se revela al cerrar la ronda.</p>'; return; }
-  if (!r.annotations.length) { caja.innerHTML = '<p class="muted">Nadie dejó notas en esta ronda.</p>'; return; }
-
-  const porBloque = {};
-  r.annotations.forEach(a => (porBloque[a.block_id] = porBloque[a.block_id] || []).push(a));
-  const max = Math.max(...Object.values(r.heat));
-
-  const calor = b => {
-    const n = r.heat[b.id] || 0;
-    if (!n) return '';
-    return ' heat-' + (n >= max ? 3 : n >= max / 2 ? 2 : 1);
-  };
-
-  caja.innerHTML = `<hr class="divider">
-    <p class="tiny">${r.annotations.length} notas. El párrafo más subrayado es el que hay que reescribir.</p>
-    <div class="doc" style="font-size:16px">
-      ${r.blocks.map(b => pintarBloque(b, calor(b)) + (porBloque[b.id]
-        ? `<div style="margin:-8px 0 20px">${porBloque[b.id].map(a => `
-            <div class="note">
-              <div class="alias">${esc(a.alias)}</div>
-              ${a.quote ? `<div class="q">${esc(a.quote)}</div>` : ''}
-              <p>${esc(a.comment)}</p>
-            </div>`).join('')}</div>`
-        : '')).join('')}
-    </div>`;
-}
 
 await cargar();
 </script>

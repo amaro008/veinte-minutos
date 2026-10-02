@@ -5,29 +5,31 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mis iniciativas · Veinte Minutos</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-<div class="top">
-  <div class="brand">Veinte Minutos <span>· iniciativas</span></div>
-  <nav><a href="#" id="salir">Salir</a></nav>
+
+<div class="band">
+  <div class="fila">
+    <div><div class="t">Mis iniciativas</div></div>
+    <a href="#" id="salir">Salir</a>
+  </div>
 </div>
 
-<div class="wrap">
-  <div id="lista"><p class="muted"><span class="spin"></span> Cargando</p></div>
+<div class="cuerpo">
+  <div id="lista"><p class="muted"><span class="giro"></span> Cargando</p></div>
 
-  <hr class="divider">
   <h2>Nueva iniciativa</h2>
   <p class="tiny">Tres campos y nada más. El facilitador trabaja mejor sin documentación previa: si le pegas la épica, va a razonar desde la solución.</p>
 
   <label for="title">Nombre corto</label>
   <input id="title" placeholder="Carrito de VEL">
 
-  <label for="one">¿Qué quieres construir o cambiar? Una frase, como se la dirías a alguien en el pasillo</label>
+  <label for="one">Qué quieres construir o cambiar, en una frase</label>
   <textarea id="one" placeholder="Queremos que el cliente pueda repetir su pedido anterior sin armarlo de nuevo."></textarea>
 
-  <label for="stage">¿En qué etapa está?</label>
+  <label for="stage">En qué etapa está</label>
   <select id="stage">
     <option value="idea">Idea. Todavía no se construye nada</option>
     <option value="desarrollo">En desarrollo</option>
@@ -35,9 +37,9 @@
   </select>
 
   <label for="area">Área</label>
-  <input id="area" placeholder="VEL, CRM, MenuLens...">
+  <input id="area" placeholder="VEL, CRM, MenuLens">
 
-  <div class="row"><button id="crear">Empezar las 5 preguntas</button></div>
+  <div class="fila" style="margin-top:18px"><button id="crear">Empezar las 5 preguntas</button></div>
   <div id="aviso"></div>
 </div>
 
@@ -49,34 +51,32 @@ const c = await sb();
 
 $('salir').onclick = async e => { e.preventDefault(); await c.auth.signOut(); location.href = '/index.html'; };
 
-const ESTADOS = { facilitacion: 'En las 5 preguntas', borrador: 'Borrador listo', rondas: 'En rondas de lectura', cerrada: 'Cerrada' };
+const ESTADOS = { facilitacion: 'En las 5 preguntas', borrador: 'Borrador listo', rondas: 'En lectura', cerrada: 'Cerrada' };
 
 async function pintar() {
   const { data, error } = await c.from('initiatives').select('*').order('created_at', { ascending: false });
   if (error) return aviso($('lista'), error.message, true);
   if (!data.length) {
-    $('lista').innerHTML = '<h1>Nada todavía</h1><p class="lead">Crea tu primera iniciativa abajo. El facilitador te va a hacer cinco preguntas, una por una.</p>';
+    $('lista').innerHTML = '<h1>Nada todavía</h1><p class="lead">Crea tu primera iniciativa aquí abajo. El facilitador te va a hacer cinco preguntas, una por una.</p>';
     return;
   }
-  $('lista').innerHTML = '<h1>Mis iniciativas</h1>' + data.map(i => `
-    <a class="item ${esc(i.stage)}" href="${i.status === 'facilitacion' ? '/session.html' : '/document.html'}?id=${i.id}">
+  $('lista').innerHTML = data.map(i => `
+    <a class="caja" href="${i.status === 'facilitacion' ? '/session.html' : '/document.html'}?id=${i.id}">
       <h3>${esc(i.title)}</h3>
-      <p class="muted" style="margin:0 0 8px">${esc(i.one_liner)}</p>
-      <span class="tag">${esc(ETAPAS[i.stage])}</span>
-      ${i.area ? `<span class="tag">${esc(i.area)}</span>` : ''}
-      <span class="tag">${esc(ESTADOS[i.status])}</span>
+      <p class="muted" style="margin:0 0 10px">${esc(i.one_liner)}</p>
+      <span class="chip">${esc(ETAPAS[i.stage])}</span>
+      ${i.area ? `<span class="chip">${esc(i.area)}</span>` : ''}
+      <span class="chip">${esc(ESTADOS[i.status])}</span>
     </a>`).join('');
 }
 await pintar();
 
 $('crear').onclick = async () => {
-  const title = $('title').value.trim();
-  const one_liner = $('one').value.trim();
+  const title = $('title').value.trim(), one_liner = $('one').value.trim();
   if (!title || one_liner.length < 10) return aviso($('aviso'), 'Falta el nombre o la frase que explica de qué se trata.', true);
   $('crear').disabled = true;
   const { data, error } = await c.from('initiatives').insert({
-    owner_id: s.user.id, title, one_liner,
-    stage: $('stage').value, area: $('area').value.trim() || null
+    owner_id: s.user.id, title, one_liner, stage: $('stage').value, area: $('area').value.trim() || null
   }).select().single();
   if (error) { $('crear').disabled = false; return aviso($('aviso'), error.message, true); }
   location.href = `/session.html?id=${data.id}`;

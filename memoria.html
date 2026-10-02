@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Memoria de la iniciativa · Veinte Minutos</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<div class="band">
+  <div class="fila">
+    <div>
+      <div class="t" id="tit">&nbsp;</div>
+      <div class="s">Lo que sé de esta iniciativa</div>
+    </div>
+    <a href="#" id="volver">Volver</a>
+  </div>
+</div>
+
+<div class="cuerpo">
+  <p class="tiny">Esto se construye solo con lo que tú dices. Cada vez que abres la iniciativa, el facilitador arranca sabiendo esto. Borra lo que ya no aplique.</p>
+
+  <div id="memoria"><p class="muted"><span class="giro"></span> Cargando</p></div>
+
+  <h2>Agregar una nota</h2>
+  <select id="tipo">
+    <option value="contexto">Contexto</option>
+    <option value="decision">Decisión que ya tomé</option>
+    <option value="pendiente">Pendiente</option>
+  </select>
+  <textarea id="texto" placeholder="Una línea, concreta."></textarea>
+  <div class="fila" style="margin-top:12px"><button id="agregar" class="suave" style="flex-grow:1">Guardar nota</button></div>
+
+  <h2>Seguir platicando</h2>
+  <p class="tiny">Aquí no hay preguntas fijas. El facilitador ya tiene el contexto de arriba, y lo que acuerden se guarda como nota.</p>
+  <div class="chat" id="chat"></div>
+  <div id="aviso"></div>
+</div>
+
+<div class="barra oscura">
+  <label for="msg">Escríbele al facilitador</label>
+  <textarea id="msg" rows="2" placeholder="Lo que traes en la cabeza sobre esta iniciativa" style="min-height:62px"></textarea>
+  <div class="fila" style="margin-top:10px"><button id="enviar">Enviar</button></div>
+</div>
+
+<script type="module">
+import { sb, exigirSesion, api, esc, aviso } from '/assets/app.js';
+const $ = id => document.getElementById(id);
+const id = new URLSearchParams(location.search).get('id');
+await exigirSesion();
+const c = await sb();
+
+const TITULOS = { contexto: 'Del contexto que diste', decision: 'Decisiones que ya tomaste', pendiente: 'Pendientes que seguiré trayendo a la mesa' };
+
+const ini = (await c.from('initiatives').select('*').eq('id', id).single()).data;
+if (!ini) location.href = '/owner.html';
+$('tit').textContent = ini.title;
+$('volver').href = ini.status === 'facilitacion' ? `/session.html?id=${id}` : `/document.html?id=${id}`;
+
+async function pintarMemoria() {
+  const notas = (await c.from('initiative_notes').select('*').eq('initiative_id', id).order('created_at')).data || [];
+  if (!notas.length) { $('memoria').innerHTML = '<p class="muted">Todavía no hay nada. Se va llenando conforme platiquen.</p>'; return; }
+  let html = '';
+  for (const k of ['contexto', 'decision', 'pendiente']) {
+    const ns = notas.filter(n => n.kind === k);
+    if (!ns.length) continue;
+    html += `<div class="caja${k === 'pendiente' ? ' amarilla' : ''}">
+      <div class="rotulo">${TITULOS[k]}</div>
+      ${ns.map(n => `<div style="font-family:var(--serif);font-size:16px;line-height:1.5;padding:10px 0;border-top:1px solid var(--line)">
+        ${esc(n.text)}
+        <button class="liga" data-borrar="${n.id}" style="display:block;margin-top:6px">Borrar</button>
+      </div>`).join('')}
+    </div>`;
+  }
+  $('memoria').innerHTML = html;
+  $('memoria').querySelectorAll('[data-borrar]').forEach(b => b.onclick = async () => {
+    await c.from('initiative_notes').delete().eq('id', b.dataset.borrar);
+    await pintarMemoria();
+  });
+}
+
+$('agregar').onclick = async () => {
+  const text = $('texto').value.trim();
+  if (text.length < 5) return;
+  await c.from('initiative_notes').insert({ initiative_id: id, kind: $('tipo').value, text, source: 'autor' });
+  $('texto').value = '';
+  await pintarMemoria();
+};
+
+const dicho = m => m.role === 'assistant'
+  ? `<div class="dicho"><div class="de">Facilitador</div><div class="texto">${esc(m.content)}</div></div>`
+  : `<div class="mio">${esc(m.content)}</div>`;
+
+async function pintarChat() {
+  const msgs = (await c.from('facilitator_messages').select('role,content')
+    .eq('initiative_id', id).eq('question_no', 0).order('id')).data || [];
+  $('chat').innerHTML = msgs.length ? msgs.map(dicho).join('') : '<p class="muted">Sin conversación todavía.</p>';
+}
+
+$('enviar').onclick = async () => {
+  const t = $('msg').value.trim();
+  if (!t) return;
+  $('enviar').disabled = true;
+  if ($('chat').querySelector('.muted')) $('chat').innerHTML = '';
+  $('chat').insertAdjacentHTML('beforeend', dicho({ role: 'user', content: t }));
+  $('msg').value = '';
+  window.scrollTo(0, document.body.scrollHeight);
+  try {
+    const r = await api('claude', { mode: 'chat', initiativeId: id, message: t });
+    $('chat').insertAdjacentHTML('beforeend', dicho({ role: 'assistant', content: r.reply }));
+    await pintarMemoria();
+  } catch (e) { aviso($('aviso'), e.message, true); }
+  $('enviar').disabled = false;
+  window.scrollTo(0, document.body.scrollHeight);
+};
+
+await pintarMemoria();
+await pintarChat();
+</script>
+</body>
+</html>

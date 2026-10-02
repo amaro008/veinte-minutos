@@ -11,19 +11,21 @@ Sin compilación y sin terminal. HTML y JS estáticos más funciones de servidor
 ```
 index.html      entrada: código de lectura o acceso de autor
 owner.html      lista de iniciativas y alta con tres campos de contexto
-session.html    las 5 preguntas fijas con el facilitador
-document.html   edición del PR/FAQ, rondas y revelado con mapa de calor
+session.html    las 5 preguntas fijas, como chat
+memoria.html    lo que el facilitador sabe de la iniciativa, y chat libre
+document.html   edición del PR/FAQ con los huecos protegidos
+sesiones.html   sesión de lectura: código, avance y revelado
 read.html       vista del lector: reloj, subrayado y notas
 assets/         estilos y utilidades compartidas
 api/            funciones de servidor (aquí viven las llaves secretas)
-supabase/       el esquema completo
+supabase/       el esquema y la migración
 ```
 
 ## Instalación
 
 **1. Supabase**
 
-Crea un proyecto. Ve a SQL Editor, pega el contenido de `supabase/schema.sql` y corre. En Authentication > Providers deja activado Email. Para las primeras pruebas conviene apagar "Confirm email" y así entras de inmediato.
+Crea un proyecto. Ve a SQL Editor, pega el contenido de `supabase/schema.sql` y corre. Si ya habías corrido una versión anterior del esquema, corre además `supabase/migracion-memoria.sql`, que agrega la tabla de memoria sin tocar lo existente. En Authentication > Providers deja activado Email. Para las primeras pruebas conviene apagar "Confirm email" y así entras de inmediato.
 
 **2. GitHub**
 
@@ -75,9 +77,15 @@ Prueba la selección de texto en un iPhone y en un Android. El menú nativo de c
 1. El autor crea la iniciativa con tres campos: nombre, una frase, etapa.
 2. Contesta las cinco preguntas. Si se atora, "Avanzar así" guarda la respuesta y marca el hueco.
 3. Genera el borrador y lo edita.
-4. Abre una ronda y reparte el código de seis caracteres.
+4. Abre la sesión de lectura y reparte el código de seis caracteres.
 5. Los lectores entran solo con el código. Reciben un alias al azar.
 6. Al cerrar la ronda todo se revela al mismo tiempo.
-7. El autor reescribe, guarda una versión nueva y abre la siguiente ronda.
+7. El autor reescribe, guarda una versión nueva y abre la siguiente sesión.
 
-Entre dos y cuatro rondas suele bastar. La regla de paro: dejas de abrir rondas cuando las preguntas que surgen ya están contestadas dentro del propio documento.
+Entre dos y cuatro sesiones suele bastar. La regla de paro: dejas de abrirlas cuando las preguntas que surgen ya están contestadas dentro del propio documento.
+
+## La memoria de la iniciativa
+
+El facilitador guarda lo que el autor le dice en tres cajones: contexto, decisiones ya tomadas y pendientes. Cada vez que se abre la iniciativa arranca sabiendo eso, así que no vuelve a preguntar lo mismo. El autor puede agregar y borrar notas a mano en `memoria.html`, y ahí mismo platicar con el facilitador fuera de las 5 preguntas.
+
+Solo guarda lo que el autor dijo. Lo que propuso el facilitador no se guarda como si fuera del autor.

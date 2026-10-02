@@ -5,34 +5,35 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lectura · Veinte Minutos</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
 
-<div class="clock">
-  <div class="t" id="reloj">--:--</div>
-  <div class="who">
-    <div id="alias">entrando</div>
-    <div id="estado">lectura en silencio</div>
+<div class="band">
+  <div class="reloj">
+    <div class="t" id="reloj">--:--</div>
+    <div class="quien"><div id="alias">entrando</div><span id="estado">lectura en silencio</span></div>
   </div>
 </div>
 
-<div class="wrap">
+<div class="cuerpo">
   <div id="aviso"></div>
-  <div class="sheet"><div class="doc" id="doc"><p class="muted"><span class="spin"></span> Abriendo el documento</p></div></div>
-  <div class="row">
-    <button id="terminar" class="ghost">Ya terminé de leer</button>
-  </div>
-  <p class="tiny" style="margin-top:14px">Selecciona cualquier parte del texto para dejar una nota. Nadie ve las notas de nadie hasta que el autor cierra la ronda, y entonces aparecen todas juntas y sin nombres.</p>
+  <div class="hoja"><div class="doc" id="doc"><p class="muted"><span class="giro"></span> Abriendo el documento</p></div></div>
+  <div class="fila" style="margin-top:16px"><button id="terminar" class="suave" style="flex-grow:1">Ya terminé de leer</button></div>
+  <p class="tiny" style="margin-top:14px">Selecciona cualquier parte del texto para dejar una nota. Nadie ve las notas de nadie hasta que el autor cierra la sesión, y entonces aparecen todas juntas y sin nombres.</p>
 </div>
 
-<div class="float" id="barra">
-  <div class="q" id="cita"></div>
-  <textarea id="nota" placeholder="¿Qué le falta a esta parte?"></textarea>
-  <div class="row">
+<div class="barra oscura" id="barra" style="display:none;position:fixed;left:0;right:0;bottom:0">
+  <div style="display:flex;gap:10px;align-items:stretch;margin-bottom:10px">
+    <div style="width:3px;background:var(--marker);flex-shrink:0"></div>
+    <div id="cita" style="font-family:var(--serif);font-style:italic;font-size:14px;line-height:1.4;color:#C6CCD2;max-height:40px;overflow:hidden"></div>
+  </div>
+  <label for="nota">Tu nota</label>
+  <textarea id="nota" rows="2" placeholder="¿Qué le falta a esta parte?" style="min-height:62px"></textarea>
+  <div class="fila" style="margin-top:10px">
     <button id="guardarNota">Dejar la nota</button>
-    <button id="cancelar" class="quiet">Cancelar</button>
+    <button id="cancelar" class="suave" style="flex-grow:0">Cancelar</button>
   </div>
 </div>
 
@@ -53,7 +54,7 @@ async function entrar() {
     $('alias').textContent = r.me.alias;
     arrancarReloj(new Date(r.me.started_at).getTime() + r.round.minutes * 60000);
     pintar();
-    if (ronda.status === 'cerrada') await revelar();
+    if (ronda.status === 'cerrada') await revisarCierre();
     else setInterval(revisarCierre, 15000);
   } catch (e) {
     $('doc').innerHTML = '';
@@ -70,19 +71,17 @@ function pintar() {
   for (const sec of ['pr', 'faq_ext', 'faq_int']) {
     const bs = bloques.filter(b => b.section === sec);
     if (!bs.length) continue;
-    if (sec !== 'pr') html += `<hr class="divider"><div class="section-name">${SECCIONES[sec]}</div>`;
+    if (sec !== 'pr') html += `<div class="seccion">${SECCIONES[sec]}</div>`;
     for (const b of bs) {
       let bloque = pintarBloque(b);
       (porBloque[b.id] || []).forEach(a => { bloque = resaltar(bloque, a.quote); });
       html += bloque;
-      if (porBloque[b.id]) {
-        html += `<div style="margin:-8px 0 18px">${porBloque[b.id].map(a => `
-          <div class="note">
-            <div class="alias">${esc(a.alias)}</div>
-            <p>${esc(a.comment)}</p>
-            ${!reveladas ? `<button class="quiet" data-borrar="${esc(a.id)}" style="margin-top:6px">Quitar</button>` : ''}
-          </div>`).join('')}</div>`;
-      }
+      if (porBloque[b.id]) html += `<div style="margin:-10px 0 20px">${porBloque[b.id].map(a => `
+        <div class="nota">
+          <div class="alias">${esc(a.alias)}</div>
+          <p>${esc(a.comment)}</p>
+          ${reveladas ? '' : `<button class="liga" data-borrar="${esc(a.id)}" style="margin-top:8px">Quitar</button>`}
+        </div>`).join('')}</div>`;
     }
   }
   $('doc').innerHTML = html;
@@ -94,7 +93,6 @@ function pintar() {
   });
 }
 
-// ---------------- seleccion de texto ----------------
 function alSeleccionar() {
   if (cerrado || reveladas) return;
   const sel = document.getSelection();
@@ -105,13 +103,13 @@ function alSeleccionar() {
   if (!nodo) return;
   seleccion = { blockId: nodo.dataset.block, quote: texto };
   $('cita').textContent = texto;
-  $('barra').classList.add('on');
+  $('barra').style.display = 'block';
   $('nota').focus();
 }
 document.addEventListener('mouseup', () => setTimeout(alSeleccionar, 10));
 document.addEventListener('touchend', () => setTimeout(alSeleccionar, 250));
 
-$('cancelar').onclick = () => { $('barra').classList.remove('on'); $('nota').value = ''; seleccion = null; };
+$('cancelar').onclick = () => { $('barra').style.display = 'none'; $('nota').value = ''; seleccion = null; };
 
 $('guardarNota').onclick = async () => {
   const comment = $('nota').value.trim();
@@ -124,19 +122,18 @@ $('guardarNota').onclick = async () => {
     }, false);
     mias.push(r.annotation);
     $('nota').value = ''; seleccion = null;
-    $('barra').classList.remove('on');
+    $('barra').style.display = 'none';
     pintar();
   } catch (e) { aviso($('aviso'), e.message, true); }
   $('guardarNota').disabled = false;
 };
 
-// ---------------- reloj ----------------
 function arrancarReloj(fin) {
   const tic = () => {
     const falta = Math.max(0, fin - Date.now());
     const m = Math.floor(falta / 60000), s = Math.floor((falta % 60000) / 1000);
     $('reloj').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    $('reloj').classList.toggle('low', falta < 120000);
+    $('reloj').classList.toggle('poco', falta < 120000);
     if (falta === 0 && !cerrado) terminar(true);
   };
   tic(); setInterval(tic, 1000);
@@ -144,21 +141,26 @@ function arrancarReloj(fin) {
 
 async function terminar(auto) {
   cerrado = true;
-  $('barra').classList.remove('on');
+  $('barra').style.display = 'none';
   $('terminar').style.display = 'none';
   $('estado').textContent = auto ? 'se acabó el tiempo' : 'listo, esperando al resto';
   try { await api('reader', { action: 'submit', code, token: localStorage.getItem(LLAVE) }, false); } catch { }
-  aviso($('aviso'), 'Tus notas quedaron guardadas. Aparecerán junto con las de los demás cuando el autor cierre la ronda.');
+  aviso($('aviso'), 'Tus notas quedaron guardadas. Aparecerán junto con las de los demás cuando el autor cierre la sesión.');
 }
 $('terminar').onclick = () => terminar(false);
 
 async function revisarCierre() {
   try {
     const r = await api('reader', { action: 'revealed', code }, false);
-    if (r.revealed) { reveladas = r.annotations; $('estado').textContent = 'revelado'; aviso($('aviso'), ''); pintar(); }
+    if (r.revealed) {
+      reveladas = r.annotations;
+      $('estado').textContent = 'revelado';
+      $('reloj').textContent = '00:00';
+      aviso($('aviso'), '');
+      pintar();
+    }
   } catch { }
 }
-async function revelar() { await revisarCierre(); }
 
 entrar();
 </script>

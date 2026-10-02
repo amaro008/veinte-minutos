@@ -3,58 +3,63 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Las 5 preguntas · Veinte Minutos</title>
+<title>Facilitador · Veinte Minutos</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-<div class="top">
-  <div class="brand">Veinte Minutos <span id="tit">·</span></div>
-  <nav><a href="/owner.html">Salir</a></nav>
+
+<div class="band">
+  <div class="fila">
+    <div class="t" id="tit">&nbsp;</div>
+    <div style="font-size:13px;color:var(--on-dark-muted)" id="cuenta"></div>
+  </div>
+  <div class="pasos" id="pasos"></div>
 </div>
 
-<div class="wrap">
-  <div class="steps" id="pasos"></div>
-  <p class="tiny" id="etiqueta"></p>
+<div class="cuerpo">
+  <a class="caja" id="aMemoria" href="#" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px">
+    <span style="font-size:14px">Lo que sé de esta iniciativa <span class="muted" id="cuentaNotas"></span></span>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5A6168" stroke-width="1.6" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+  </a>
 
-  <div id="chat"></div>
+  <p class="tiny" id="etiqueta"></p>
+  <div class="chat" id="chat"></div>
   <div id="aviso"></div>
 
-  <div id="zonaEscribir">
-    <textarea id="msg" placeholder="Escribe tu respuesta"></textarea>
-    <div class="row">
-      <button id="enviar">Responder</button>
-      <button id="forzar" class="quiet" title="Guarda lo que escribiste y sigue. El hueco queda marcado en el documento.">Avanzar así</button>
-    </div>
-  </div>
-
   <div id="zonaFinal" style="display:none">
-    <div class="banner">Las cinco respuestas están registradas. El borrador se genera a partir de ellas, sin agregar datos que tú no hayas dado.</div>
-    <div class="row"><button id="generar">Generar el borrador</button></div>
+    <div class="aviso">Las cinco respuestas están registradas. El borrador se arma solo con ellas, sin agregar datos que tú no hayas dado.</div>
+    <div class="fila"><button id="generar">Generar el borrador</button></div>
+  </div>
+</div>
+
+<div class="barra oscura" id="zonaEscribir">
+  <label for="msg">Tu respuesta</label>
+  <textarea id="msg" rows="2" placeholder="Escribe aquí" style="min-height:62px"></textarea>
+  <div class="fila" style="margin-top:10px">
+    <button id="forzar" class="liga" style="flex-grow:0;color:#9BA3AA">Avanzar así</button>
+    <div style="flex-grow:1"></div>
+    <button id="enviar" style="flex-grow:0">Responder</button>
   </div>
 </div>
 
 <script type="module">
-import { sb, exigirSesion, api, esc, aviso } from '/assets/app.js';
+import { sb, exigirSesion, api, esc, aviso, PREGUNTAS } from '/assets/app.js';
 const $ = id => document.getElementById(id);
 const id = new URLSearchParams(location.search).get('id');
 await exigirSesion();
 const c = await sb();
 
-const PREGUNTAS = [
-  'Quién es el cliente',
-  'Cuál es su problema u oportunidad',
-  'Cuál es el beneficio más importante',
-  'Cómo sabes que lo necesita',
-  'Cómo se ve su experiencia'
-];
-
 let qActual = 1, ultimo = '', respuestas = [];
 
 const ini = (await c.from('initiatives').select('*').eq('id', id).single()).data;
-if (!ini) { location.href = '/owner.html'; }
-$('tit').textContent = '· ' + ini.title;
+if (!ini) location.href = '/owner.html';
+$('tit').textContent = ini.title;
+$('aMemoria').href = `/memoria.html?id=${id}`;
+
+const notas = (await c.from('initiative_notes').select('id').eq('initiative_id', id)).data || [];
+$('cuentaNotas').textContent = notas.length ? `· ${notas.length} notas` : '· todavía vacío';
 
 async function cargar() {
   respuestas = (await c.from('answers').select('question_no,quality').eq('initiative_id', id)).data || [];
@@ -65,55 +70,55 @@ async function cargar() {
   if (qActual === 6) {
     $('zonaEscribir').style.display = 'none';
     $('zonaFinal').style.display = 'block';
-    $('etiqueta').textContent = 'Las 5 preguntas están contestadas.';
+    $('cuenta').textContent = '5 de 5';
+    $('etiqueta').textContent = 'Las cinco preguntas están contestadas.';
     $('chat').innerHTML = '';
     return;
   }
-  $('etiqueta').textContent = `Pregunta ${qActual} de 5. ${PREGUNTAS[qActual - 1]}`;
+  $('cuenta').textContent = `${qActual} de 5`;
+  $('etiqueta').textContent = `Pregunta ${qActual}. ${PREGUNTAS[qActual - 1]}`;
 
   const msgs = (await c.from('facilitator_messages').select('role,content')
     .eq('initiative_id', id).eq('question_no', qActual).order('id')).data || [];
-  $('chat').innerHTML = msgs.map(pintarMsg).join('');
-
-  if (!msgs.length) await turno(null);
-  else window.scrollTo(0, document.body.scrollHeight);
+  $('chat').innerHTML = msgs.map(dicho).join('');
+  if (!msgs.length) await turno(null); else abajo();
 }
 
 function pintarPasos() {
   const q = {}; respuestas.forEach(r => q[r.question_no] = r.quality);
-  $('pasos').innerHTML = [1, 2, 3, 4, 5].map(n => {
-    const cls = q[n] === 'weak' ? 'weak' : q[n] ? 'done' : (n === qActual ? 'now' : '');
-    return `<div class="step ${cls}"></div>`;
-  }).join('');
+  $('pasos').innerHTML = [1, 2, 3, 4, 5].map(n =>
+    `<div class="paso ${q[n] === 'weak' ? 'debil' : q[n] ? 'hecho' : (n === qActual ? 'ahora' : '')}"></div>`).join('');
 }
 
-const pintarMsg = m => m.role === 'assistant'
-  ? `<div class="msg f"><div class="from">Facilitador</div><p>${esc(m.content)}</p></div>`
-  : `<div class="msg u"><p>${esc(m.content)}</p></div>`;
+const dicho = m => m.role === 'assistant'
+  ? `<div class="dicho"><div class="de">Facilitador</div><div class="texto">${esc(m.content)}</div></div>`
+  : `<div class="mio">${esc(m.content)}</div>`;
+
+const abajo = () => window.scrollTo(0, document.body.scrollHeight);
 
 async function turno(texto) {
   $('enviar').disabled = $('forzar').disabled = true;
   aviso($('aviso'), '');
-  $('chat').insertAdjacentHTML('beforeend', '<p class="muted" id="cargando"><span class="spin"></span> Pensando</p>');
-  window.scrollTo(0, document.body.scrollHeight);
+  $('chat').insertAdjacentHTML('beforeend', '<p class="muted" id="cargando"><span class="giro"></span> Pensando</p>');
+  abajo();
   try {
     const r = await api('claude', { mode: 'facilitate', initiativeId: id, questionNo: qActual, message: texto });
     $('cargando')?.remove();
-    $('chat').insertAdjacentHTML('beforeend', pintarMsg({ role: 'assistant', content: r.reply }));
+    $('chat').insertAdjacentHTML('beforeend', dicho({ role: 'assistant', content: r.reply }));
     if (r.accepted) { $('msg').value = ''; await cargar(); }
   } catch (e) {
     $('cargando')?.remove();
     aviso($('aviso'), e.message, true);
   }
   $('enviar').disabled = $('forzar').disabled = false;
-  window.scrollTo(0, document.body.scrollHeight);
+  abajo();
 }
 
 $('enviar').onclick = async () => {
   const t = $('msg').value.trim();
   if (!t) return;
   ultimo = t;
-  $('chat').insertAdjacentHTML('beforeend', pintarMsg({ role: 'user', content: t }));
+  $('chat').insertAdjacentHTML('beforeend', dicho({ role: 'user', content: t }));
   $('msg').value = '';
   await turno(t);
 };
@@ -133,10 +138,7 @@ $('generar').onclick = async () => {
   try {
     await api('claude', { mode: 'draft', initiativeId: id });
     location.href = `/document.html?id=${id}`;
-  } catch (e) {
-    aviso($('aviso'), e.message, true);
-    $('generar').disabled = false;
-  }
+  } catch (e) { aviso($('aviso'), e.message, true); $('generar').disabled = false; }
 };
 
 await cargar();

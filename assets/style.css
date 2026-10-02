@@ -1,169 +1,177 @@
 /* Veinte Minutos
-   Papel frio, tinta pizarra, marcador amarillo y lapiz rojo de editor.
-   Todo el atrevimiento esta en el reloj de la pantalla de lectura. */
+   Tinta profunda para el cromo, hoja blanca para el documento,
+   marcador amarillo cargando todo el peso visual. */
 
 :root{
-  --paper:#E7E9E4;
-  --sheet:#FCFCFA;
-  --ink:#1B2128;
-  --ink-soft:#5C656E;
-  --rule:#CDD2CC;
-  --marker:#FFE45C;
-  --marker-soft:rgba(255,228,92,.45);
-  --pencil:#A83226;
-  --green:#2E6B4F;
-  --shadow:0 1px 0 var(--rule);
+  --ink:#141A1F;
+  --ink-2:#222A32;
+  --ink-line:#3A444D;
+  --on-dark:#F4F4F0;
+  --on-dark-muted:#9BA3AA;
+  --ground:#E6E7E1;
+  --sheet:#FFFFFF;
+  --line:#CFD2CB;
+  --muted:#5A6168;
+  --marker:#F2C700;
+  --marker-soft:#FFF9DB;
+  --marker-line:#E2CB5E;
+  --marker-deep:#6B5B14;
+  --pencil:#B23A2E;
+  --green:#2F6B4F;
   --serif:'Newsreader',Georgia,serif;
-  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --sans:'Instrument Sans',system-ui,sans-serif;
 }
 
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
+html,body{margin:0;height:100%}
 body{
-  background:var(--paper);
-  color:var(--ink);
-  font-family:var(--sans);
-  font-size:16px;
-  line-height:1.5;
+  background:var(--ground);color:var(--ink);
+  font-family:var(--sans);font-size:16px;line-height:1.5;
   -webkit-text-size-adjust:100%;
+  display:flex;flex-direction:column;min-height:100%;
 }
-.wrap{max-width:640px;margin:0 auto;padding:20px 18px 72px}
-a{color:var(--ink)}
 
-/* ---------- barra superior ---------- */
-.top{
-  display:flex;align-items:baseline;justify-content:space-between;
-  gap:12px;padding:14px 18px;border-bottom:1px solid var(--rule);
-  position:sticky;top:0;background:var(--paper);z-index:20;
+/* ---------- banda de tinta ---------- */
+.band{
+  background:var(--ink);color:var(--on-dark);
+  padding:18px 20px 16px;position:sticky;top:0;z-index:30;
 }
-.brand{font-family:var(--sans);font-weight:600;letter-spacing:-.02em;font-size:15px}
-.brand span{color:var(--ink-soft);font-weight:400}
-.top nav{font-size:14px;color:var(--ink-soft);display:flex;gap:14px}
-.top nav a{text-decoration:none;color:var(--ink-soft)}
-.top nav a:hover{color:var(--ink)}
+.band .t{font-family:var(--serif);font-size:21px;line-height:1.2}
+.band .s{font-size:13px;color:var(--on-dark-muted);margin-top:3px}
+.band .fila{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.band a{color:var(--on-dark-muted);text-decoration:none;font-size:14px}
+.band a:hover{color:var(--on-dark)}
 
-/* ---------- tipografia ---------- */
-h1{font-family:var(--serif);font-weight:500;font-size:30px;line-height:1.15;letter-spacing:-.02em;margin:24px 0 8px}
-h2{font-family:var(--sans);font-weight:600;font-size:15px;margin:32px 0 10px}
-p{margin:0 0 14px;max-width:66ch}
-.lead{font-family:var(--serif);font-size:19px;line-height:1.45;color:var(--ink-soft)}
-.muted{color:var(--ink-soft);font-size:14px}
-.tiny{font-size:13px;color:var(--ink-soft)}
+.pasos{display:flex;gap:4px;margin-top:12px}
+.paso{flex-grow:1;height:3px;background:var(--ink-line)}
+.paso.hecho{background:var(--marker)}
+.paso.debil{background:var(--pencil)}
+.paso.ahora{background:var(--on-dark)}
+
+/* ---------- cuerpo ---------- */
+.cuerpo{flex-grow:1;padding:20px;max-width:720px;width:100%;margin:0 auto}
+h1{font-family:var(--serif);font-weight:500;font-size:30px;line-height:1.18;margin:0 0 10px}
+h2{font-size:15px;font-weight:600;margin:28px 0 10px}
+p{margin:0 0 14px;max-width:62ch}
+.lead{font-family:var(--serif);font-size:19px;line-height:1.45;color:var(--muted)}
+.muted{color:var(--muted);font-size:14px}
+.tiny{font-size:13px;color:var(--muted);line-height:1.45}
 
 /* ---------- controles ---------- */
-label{display:block;font-size:13px;font-weight:500;margin:14px 0 5px}
+label{display:block;font-size:12px;color:var(--muted);margin:16px 0 6px}
 input,textarea,select{
-  width:100%;font:inherit;color:var(--ink);background:var(--sheet);
-  border:1px solid var(--rule);border-radius:2px;padding:11px 12px;
+  width:100%;font:inherit;font-size:15px;color:var(--ink);background:var(--sheet);
+  border:1px solid var(--line);border-radius:0;padding:12px;
 }
-textarea{resize:vertical;min-height:92px;line-height:1.5}
-input:focus,textarea:focus,select:focus,button:focus-visible{
-  outline:2px solid var(--ink);outline-offset:1px;
+textarea{resize:vertical;min-height:88px}
+input:focus,textarea:focus,select:focus,button:focus-visible,a:focus-visible{
+  outline:2px solid var(--ink);outline-offset:2px;
 }
-button{
-  font:inherit;font-weight:500;cursor:pointer;border-radius:2px;
-  border:1px solid var(--ink);background:var(--ink);color:var(--paper);
-  padding:11px 18px;
+button,.btn{
+  font:inherit;font-size:15px;font-weight:600;cursor:pointer;min-height:46px;
+  border:1px solid var(--ink);background:var(--marker);color:var(--ink);
+  padding:12px 22px;border-radius:0;text-decoration:none;display:inline-flex;
+  align-items:center;justify-content:center;
 }
+button.oscuro{background:var(--ink);color:var(--on-dark)}
+button.suave{background:transparent;border-color:var(--line);color:var(--muted);font-weight:400}
+button.liga{background:transparent;border:0;color:var(--muted);font-weight:400;
+  font-size:13px;min-height:0;padding:0;text-decoration:underline}
 button:disabled{opacity:.45;cursor:default}
-button.ghost{background:transparent;color:var(--ink)}
-button.quiet{background:transparent;border-color:var(--rule);color:var(--ink-soft);padding:7px 12px;font-size:14px}
-button.danger{background:transparent;border-color:var(--pencil);color:var(--pencil)}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.fila{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fila>button{flex-grow:1}
+.fila>button.suave{flex-grow:0}
 
-/* ---------- tarjetas de lista ---------- */
-.item{
-  display:block;background:var(--sheet);border:1px solid var(--rule);
-  border-left:3px solid var(--ink);padding:14px 15px;margin-bottom:10px;
-  text-decoration:none;
+/* ---------- barra inferior ---------- */
+.barra{
+  position:sticky;bottom:0;background:var(--sheet);border-top:1px solid var(--line);
+  padding:14px 20px 18px;z-index:20;
 }
-.item h3{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 4px}
-.item.idea{border-left-color:var(--ink-soft)}
-.item.produccion{border-left-color:var(--green)}
-.tag{
-  display:inline-block;font-size:12px;color:var(--ink-soft);
-  border:1px solid var(--rule);padding:1px 7px;border-radius:2px;margin-right:6px;
-}
+.barra.oscura{background:var(--ink);border-top-color:var(--ink-line)}
+.barra.oscura label{color:var(--on-dark-muted)}
+.barra.oscura textarea{background:var(--ink-2);border-color:var(--ink-line);color:var(--on-dark)}
+.barra.oscura button.suave{border-color:var(--ink-line);color:#C6CCD2}
+.barra .centro{display:block;text-align:center;margin-top:8px}
 
-/* ---------- el documento ---------- */
-.sheet{background:var(--sheet);border:1px solid var(--rule);padding:26px 22px;margin-top:18px}
-.doc{font-family:var(--serif);font-size:18px;line-height:1.62}
-.doc .blk{padding:2px 0;margin:0 0 18px;scroll-margin-top:140px}
-.doc .title{font-size:27px;line-height:1.2;font-weight:500;margin-bottom:10px}
-.doc .sub{font-size:19px;color:var(--ink-soft);font-style:italic;margin-bottom:22px}
-.doc .bh{display:block;font-family:var(--sans);font-size:13px;font-weight:600;margin-bottom:3px}
-.doc .qa .bh{font-family:var(--serif);font-size:18px;font-weight:600;font-style:normal;margin-bottom:2px}
+/* ---------- tarjetas ---------- */
+.caja{background:var(--sheet);border:1px solid var(--line);padding:18px;margin-bottom:12px}
+.caja.amarilla{background:var(--marker-soft);border-color:var(--marker-line)}
+.caja h3{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 4px}
+.rotulo{font-size:12px;color:var(--muted);margin-bottom:10px}
+a.caja{display:block;text-decoration:none;color:inherit}
+.chip{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--line);
+  padding:2px 8px;margin:0 6px 6px 0}
+.chip.fuerte{background:var(--ink);color:var(--marker);border-color:var(--ink);font-weight:600}
+
+/* ---------- documento ---------- */
+.hoja{background:var(--sheet);border:1px solid var(--line);padding:26px 22px}
+.doc{font-family:var(--serif);font-size:17px;line-height:1.6}
+.doc .blk{margin:0 0 20px;scroll-margin-top:120px}
+.doc .title{font-size:25px;line-height:1.22;margin-bottom:10px}
+.doc .sub{font-size:17px;font-style:italic;color:var(--muted);margin-bottom:22px}
+.doc .bh{display:block;font-family:var(--sans);font-size:12px;font-weight:600;margin-bottom:4px}
+.doc .qa .bh{font-family:var(--serif);font-size:17px;font-weight:600;margin-bottom:2px}
 .doc blockquote{margin:0;padding-left:14px;border-left:2px solid var(--marker);font-style:italic}
-.divider{border:0;border-top:1px solid var(--rule);margin:30px 0 22px}
-.section-name{font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:14px}
+.doc .hueco{background:var(--marker-soft);border:1px solid var(--marker-line);padding:14px 15px}
+.doc .hueco.resuelto{background:var(--sheet);border-color:var(--line)}
+.marca{font-family:var(--sans);font-size:12px;color:var(--marker-deep);display:block;margin-top:8px}
+.marca.resuelta{color:var(--green)}
+.seccion{font-size:12px;font-weight:600;color:var(--muted);margin:30px 0 14px;
+  padding-top:22px;border-top:1px solid var(--line)}
 
-.flagged{border-left:2px solid var(--pencil);padding-left:12px}
-.flagged.resolved{border-left-color:var(--green)}
-.flag-note{font-family:var(--sans);font-size:12px;color:var(--pencil);display:block;margin-top:5px}
-.flag-note.resolved{color:var(--green)}
+mark{background:var(--marker);color:inherit;box-shadow:0 0 0 2px var(--marker)}
+.calor-1{background:rgba(242,199,0,.2)}
+.calor-2{background:rgba(242,199,0,.42)}
+.calor-3{background:rgba(242,199,0,.7)}
 
-/* ---------- marcador ---------- */
-mark{background:var(--marker-soft);color:inherit;padding:1px 0}
-.heat-1{background:rgba(255,228,92,.22)}
-.heat-2{background:rgba(255,228,92,.4)}
-.heat-3{background:rgba(255,228,92,.62)}
+/* ---------- chat ---------- */
+.chat{display:flex;flex-direction:column;gap:22px;padding-bottom:8px}
+.dicho{display:flex;flex-direction:column;gap:6px}
+.dicho .de{font-size:12px;color:var(--muted)}
+.dicho .texto{font-family:var(--serif);font-size:19px;line-height:1.5}
+.mio{align-self:flex-end;max-width:85%;background:var(--ink);color:var(--on-dark);
+  padding:11px 14px;font-size:15px;line-height:1.45}
 
 /* ---------- reloj ---------- */
-.clock{
-  position:sticky;top:0;z-index:30;background:var(--paper);
-  border-bottom:1px solid var(--rule);padding:10px 18px;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-}
-.clock .t{
-  font-family:var(--sans);font-variant-numeric:tabular-nums;
-  font-size:34px;font-weight:300;letter-spacing:-.03em;line-height:1;
-}
-.clock .t.low{color:var(--pencil)}
-.clock .who{font-size:13px;color:var(--ink-soft);text-align:right;line-height:1.3}
+.reloj{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.reloj .t{font-size:38px;font-weight:300;letter-spacing:-.02em;line-height:1;
+  color:var(--marker);font-variant-numeric:tabular-nums}
+.reloj .t.poco{color:#FF8A75}
+.reloj .quien{text-align:right;font-size:13px}
+.reloj .quien span{display:block;font-size:12px;color:var(--on-dark-muted)}
 
-/* ---------- barra flotante de anotacion ---------- */
-.float{
-  position:fixed;left:12px;right:12px;bottom:14px;z-index:40;
-  background:var(--ink);color:var(--paper);padding:12px;
-  display:none;box-shadow:0 6px 24px rgba(27,33,40,.28);
-}
-.float.on{display:block}
-.float textarea{background:#262D35;border-color:#3A434D;color:#F1F3F0;min-height:66px}
-.float .row{margin-top:10px}
-.float button{border-color:var(--marker);background:var(--marker);color:var(--ink)}
-.float button.quiet{background:transparent;border-color:#4A545E;color:#C6CCD2}
-.float .q{font-family:var(--serif);font-size:14px;color:#C6CCD2;font-style:italic;
-  margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* ---------- sesión de lectura ---------- */
+.estados{display:flex;background:var(--sheet);border:1px solid var(--line);margin-bottom:18px}
+.estados div{flex-grow:1;padding:12px 10px;border-right:1px solid var(--line)}
+.estados div:last-child{border-right:0}
+.estados .cuando{font-size:11px;color:var(--muted);margin-bottom:3px}
+.estados .que{font-size:13px;color:var(--muted)}
+.estados .activo{background:var(--ink)}
+.estados .activo .cuando{color:var(--on-dark-muted)}
+.estados .activo .que{color:var(--on-dark);font-weight:500}
 
-/* ---------- notas ---------- */
-.note{border-left:2px solid var(--marker);background:var(--sheet);padding:10px 12px;margin:0 0 8px}
-.note .alias{font-size:12px;color:var(--ink-soft);margin-bottom:3px}
-.note .q{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-soft);margin-bottom:5px}
-.note p{margin:0;font-size:15px}
+.codigo{background:var(--ink);color:var(--on-dark);padding:24px 20px;margin-bottom:18px}
+.codigo .n{font-size:42px;font-weight:600;letter-spacing:.14em;color:var(--marker);
+  line-height:1;margin:14px 0 18px;word-break:break-all}
+.codigo .rotulo{color:var(--on-dark-muted);margin:0}
+.codigo button{background:var(--marker);border-color:var(--marker)}
+.codigo button.suave{border-color:var(--ink-line);color:var(--on-dark);background:transparent}
 
-/* ---------- chat del facilitador ---------- */
-.msg{margin-bottom:16px;max-width:60ch}
-.msg .from{font-size:12px;color:var(--ink-soft);margin-bottom:3px}
-.msg.f p{font-family:var(--serif);font-size:18px;line-height:1.55;margin:0}
-.msg.u{margin-left:auto;text-align:right}
-.msg.u p{background:var(--sheet);border:1px solid var(--rule);display:inline-block;
-  padding:9px 12px;text-align:left;margin:0;font-size:15px}
-.steps{display:flex;gap:5px;margin:16px 0 6px}
-.step{flex:1;height:3px;background:var(--rule)}
-.step.done{background:var(--ink)}
-.step.now{background:var(--marker)}
-.step.weak{background:var(--pencil)}
+.gente{display:flex;gap:7px;margin:14px 0}
+.gente i{width:38px;height:38px;background:var(--line);display:block}
+.gente i.entro{background:var(--ink)}
+.gente i.listo{background:var(--marker)}
 
-.banner{border:1px solid var(--rule);border-left:3px solid var(--marker);
-  background:var(--sheet);padding:12px 14px;margin:16px 0;font-size:14px}
-.err{border-left-color:var(--pencil);color:var(--pencil)}
-.code{font-family:var(--sans);font-size:32px;font-weight:600;letter-spacing:.18em}
-.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--rule);
-  border-top-color:var(--ink);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
-@keyframes sp{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.spin{animation:none}}
-@media (min-width:720px){
-  .wrap{padding-top:28px}
-  h1{font-size:38px}
-  .sheet{padding:40px 44px}
-}
+.nota{background:var(--sheet);border:1px solid var(--line);padding:16px 18px;margin-bottom:10px}
+.nota .alias{font-size:12px;color:var(--muted);margin-bottom:7px}
+.nota .cita{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);margin-bottom:6px}
+.nota p{margin:0;font-family:var(--serif);font-size:16px;line-height:1.5}
+
+.aviso{border:1px solid var(--marker-line);background:var(--marker-soft);
+  padding:12px 14px;margin:14px 0;font-size:14px;line-height:1.45}
+.aviso.mal{border-color:var(--pencil);background:var(--sheet);color:var(--pencil)}
+.giro{display:inline-block;width:13px;height:13px;border:2px solid var(--line);
+  border-top-color:var(--ink);border-radius:50%;animation:g .7s linear infinite;vertical-align:-2px}
+@keyframes g{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.giro{animation:none}}
+@media (min-width:720px){h1{font-size:36px}.hoja{padding:40px 44px}}

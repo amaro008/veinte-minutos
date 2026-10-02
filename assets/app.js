@@ -23,7 +23,6 @@ export async function exigirSesion() {
   return s;
 }
 
-// Llamada a las funciones del servidor, firmada con la sesion del autor.
 export async function api(ruta, cuerpo, conSesion = true) {
   const headers = { 'Content-Type': 'application/json' };
   if (conSesion) {
@@ -42,43 +41,46 @@ export const esc = t => String(t ?? '').replace(/[&<>"]/g, c =>
 export const SECCIONES = {
   pr: 'Comunicado de prensa',
   faq_ext: 'Preguntas del usuario',
-  faq_int: 'Preguntas del comite'
+  faq_int: 'Preguntas del comité'
 };
 
-export const ETAPAS = {
-  idea: 'Idea',
-  desarrollo: 'En desarrollo',
-  produccion: 'En produccion'
-};
+export const ETAPAS = { idea: 'Idea', desarrollo: 'En desarrollo', produccion: 'En producción' };
 
-export function aviso(el, texto, esError = false) {
-  if (!texto) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="banner${esError ? ' err' : ''}">${esc(texto)}</div>`;
+export const PREGUNTAS = [
+  'Quién es el cliente',
+  'Cuál es su problema u oportunidad',
+  'Cuál es el beneficio más importante',
+  'Cómo sabes que lo necesita',
+  'Cómo se ve su experiencia'
+];
+
+export function aviso(el, texto, mal = false) {
+  el.innerHTML = texto ? `<div class="aviso${mal ? ' mal' : ''}">${esc(texto)}</div>` : '';
 }
 
 // Dibuja un bloque del documento en modo lectura.
-export function pintarBloque(b, extraClase = '') {
-  const flag = b.flag && b.status !== 'resolved' ? ' flagged' : (b.flag ? ' flagged resolved' : '');
-  const cls = `blk ${b.type}${flag} ${extraClase}`;
+export function pintarBloque(b, extra = '') {
+  const abierto = b.flag && b.status !== 'resolved';
+  const resuelto = b.flag && b.status === 'resolved';
+  const cls = `blk ${b.type}${b.flag ? ' hueco' : ''}${resuelto ? ' resuelto' : ''} ${extra}`;
   let dentro = '';
   if (b.heading) dentro += `<span class="bh">${esc(b.heading)}</span>`;
-  if (b.type === 'quote') dentro += `<blockquote>${esc(b.text)}</blockquote>`;
-  else dentro += esc(b.text);
+  dentro += b.type === 'quote' ? `<blockquote>${esc(b.text)}</blockquote>` : esc(b.text);
   if (b.flag) {
-    const resuelto = b.status === 'resolved';
     const etiqueta = resuelto
       ? `Resuelto: ${b.evidence || ''}`
       : (b.flag === 'supuesto' ? 'Supuesto sin validar' : 'Pregunta abierta');
-    dentro += `<span class="flag-note${resuelto ? ' resolved' : ''}">${esc(etiqueta)}</span>`;
+    dentro += `<span class="marca${resuelto ? ' resuelta' : ''}">${esc(etiqueta)}</span>`;
   }
   return `<div class="${cls}" data-block="${esc(b.id)}">${dentro}</div>`;
 }
 
-// Envuelve en <mark> la primera aparicion del texto citado.
+// Envuelve en <mark> la primera aparición del texto citado.
 export function resaltar(html, cita) {
   if (!cita) return html;
   const c = esc(cita);
   const i = html.indexOf(c);
-  if (i === -1) return html;
-  return html.slice(0, i) + '<mark>' + c + '</mark>' + html.slice(i + c.length);
+  return i === -1 ? html : html.slice(0, i) + '<mark>' + c + '</mark>' + html.slice(i + c.length);
 }
+
+export const FUENTES = '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">';
